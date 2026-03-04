@@ -4,7 +4,7 @@
 \alias{mcc}
 \title{Mean Cumulative Count for Left-Truncated Competing Risks Data}
 \usage{
-mcc(id, time, status, Tstart = NULL, ci = FALSE, niter = 1000)
+mcc(id, time, status, Tstart = NULL, ci = FALSE, niter = 1000, seed = NULL)
 }
 \arguments{
 \item{id}{A vector identifying individual subjects.}
@@ -15,17 +15,19 @@ mcc(id, time, status, Tstart = NULL, ci = FALSE, niter = 1000)
 
 \item{Tstart}{A numeric vector representing the age or time at study entry (left-truncation). Defaults to 0 if not provided, assuming subjects are followed from time zero.}
 
-\item{ci}{Logical; if \code{TRUE}, calculates 95\% bootstrap confidence intervals. Default is FALSE}
+\item{ci}{Logical; if \code{TRUE}, calculates 95\% bootstrap confidence intervals. Default is FALSE.}
 
 \item{niter}{Integer; the number of bootstrap iterations to run if \code{ci = TRUE}. Default is 1000.}
+
+\item{seed}{Optional integer to set the seed for reproducible bootstrap results.}
 }
 \value{
-A data frame of class \code{"mcc"} containing the time points, estimated mean cumulative count, and optionally the lower and upper 95\% confidence intervals from the bootstrap method.
+A data frame of class \code{"mcc"} containing the time points, estimated mean cumulative count, and optionally the 95\% bootstrap confidence intervals.
 }
 \description{
 Estimates the total burden of recurrent events within a population using the Mean
 Cumulative Count (MCC) method. Specifically designed to handle left-truncated data
-in the presence of competing risks by pulling accurate, time-dependent censoring
+in the presence of competing risks by applying time-dependent censoring
 and truncation weights.
 }
 \examples{
@@ -39,10 +41,16 @@ mydata <- data.frame(
 
 # Calculate the Mean Cumulative Count without bootstrap CIs
 result <- mcc(id = mydata$id, time = mydata$time,
-              status = mydata$status, Tstart = mydata$tstart,
-              ci = FALSE)
+               status = mydata$status, Tstart = mydata$tstart)
 
 print(result)
+
+# Calculate the Mean Cumulative Count with bootstrap CIs
+result_ci <- mcc(id = mydata$id, time = mydata$time,
+               status = mydata$status, Tstart = mydata$tstart,
+               ci = TRUE, niter = 100, seed = 123)
+
+print(result_ci)
 }
 \author{
 Grace Zhou, Department of Biostatistics at St. Jude Children's Hospital \email{grace.zhou@stjude.org}

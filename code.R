@@ -40,3 +40,17 @@ result_ci <- mcc(id = mydata$id,
                  ci = TRUE, niter = 500)
 
 print(result_ci)
+
+source("C:/Users/gzhou/OneDrive - St. Jude Children's Research Hospital/4GRACE/MCC/MCC R PACKAGE/MY_MCC_R.R")
+library(dplyr)
+MY.MCC(id = mydata$id,
+       time = mydata$time,
+       status = mydata$status,
+       Tstart = mydata$tstart,
+       ci=FALSE)
+
+MY.MCC(id = mydata$id,
+       time = mydata$time,
+       status = mydata$status,
+       Tstart = mydata$tstart,
+       ci=TRUE, niter = 500)

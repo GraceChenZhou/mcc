@@ -8,7 +8,7 @@
 #' @param status A numeric vector indicating event status (1 = event of interest, 0 = censored, 2 = competing risk).
 #' @param Tstart A numeric vector representing the age or time at study entry (left-truncation). Defaults to 0 if not provided, assuming subjects are followed from time zero.
 #' @return A data frame containing the time points and the estimated mean cumulative count.
-#' @author Grace Zhou, Department of Biostatistics at St. Jude Children's Hospital \email{grace.zhou@@stjude.org}
+#' @author Grace Zhou, Department of Biostatistics at St. Jude Children's Hospital \email{grace.zhou@stjude.org}
 #' @keywords internal
 #' @noRd
 scumi <- function(id, time, status, Tstart = 0) {
@@ -31,7 +31,7 @@ scumi <- function(id, time, status, Tstart = 0) {
   ftime <- sort(unique(indata2$time))
 
   if (Event$n == 0) {
-    MCC.out <- data.frame(time = as.character(ftime), MCC = rep(0, length(ftime)))
+    MCC.out <- data.frame(time = ftime, MCC = rep(0, length(ftime)))
   } else {
     M <- indata2 %>%
       dplyr::filter(.data$status == 1) %>%
@@ -54,14 +54,10 @@ scumi <- function(id, time, status, Tstart = 0) {
         count.data <- mstate::crprep(Tstop = "time", status = "status", data = out.i.th,
                                      trans = 1, cens = 0, Tstart = "tstart", id = "id")
 
-        # crprep does not return weight.trunc if a specific subset has no tstart > 0
         if (!"weight.trunc" %in% names(count.data)) {
           count.data$weight.trunc <- 1
         }
 
-        # Handle NA/NaN/Inf in weights — NA weights arise when survival estimate is
-        # unavailable (e.g. time is beyond last observed event in KM estimator).
-        # Safe fallback: carry forward last known weight, then fill leading NAs with 1.
         count.data <- count.data %>%
           dplyr::arrange(.data$id, .data$Tstop) %>%
           dplyr::group_by(.data$id) %>%
@@ -70,18 +66,16 @@ scumi <- function(id, time, status, Tstart = 0) {
             weight.trunc = ifelse(!is.finite(.data$weight.trunc), NA_real_, .data$weight.trunc),
             weight.cens  = zoo::na.locf(.data$weight.cens,  na.rm = FALSE),
             weight.trunc = zoo::na.locf(.data$weight.trunc, na.rm = FALSE),
-            # Fill any remaining leading NAs (no prior value to carry forward) with 1
             weight.cens  = ifelse(is.na(.data$weight.cens),  1, .data$weight.cens),
             weight.trunc = ifelse(is.na(.data$weight.trunc), 1, .data$weight.trunc)
           ) %>%
           dplyr::ungroup()
 
-        # Calculate case weights safely inside the dataframe to avoid length mismatches
         count.data$case_weights <- count.data$weight.cens * count.data$weight.trunc
 
         fit.i.th <- survival::survfit(survival::Surv(Tstart, Tstop, status == 1) ~ 1,
                                       data = count.data,
-                                      weight = count.data$case_weights)
+                                      weights = count.data$case_weights)
 
         output <- summary(fit.i.th)
         output2 <- data.frame(time = output$time, CumI = 1 - output$surv)
@@ -89,11 +83,13 @@ scumi <- function(id, time, status, Tstart = 0) {
         CumI.i.th <- data.frame(time = ftime) %>%
           dplyr::left_join(output2, by = 'time') %>%
           dplyr::mutate(CumI = ifelse(dplyr::row_number() == 1 & is.na(.data$CumI), 0, .data$CumI),
-                        CumI = zoo::na.locf(.data$CumI),
+                        CumI = zoo::na.locf(.data$CumI, na.rm = FALSE),
                         M = i)
       } else {
-        fit.i.th <- with(out.i.th, cmprsk::cuminc(time, status))
-        CumI.i.th <- cmprsk::timepoints(fit.i.th, ftime)$est[1,]
+        fit.i.th <- cmprsk::cuminc(out.i.th$time, out.i.th$status)
+        CumI.i.th <- data.frame(time = ftime,
+                                CumI = cmprsk::timepoints(fit.i.th, ftime)$est[1,],
+                                M = i)
       }
 
       CumI.list[[i]] <- CumI.i.th
@@ -102,19 +98,23 @@ scumi <- function(id, time, status, Tstart = 0) {
     MCC.raw <- do.call(rbind, CumI.list)
 
     if (!calc.trunc) {
-      MCC.fill <- apply(MCC.raw, 1, zoo::na.locf, na.rm = FALSE)
-      MCC <- rowSums(MCC.fill)
-      MCC.out <- data.frame(MCC) %>% dplyr::mutate(time = colnames(MCC.raw))
+      MCC.fill <- MCC.raw %>%
+        dplyr::group_by(.data$M) %>%
+        dplyr::mutate(CumI = zoo::na.locf(.data$CumI, na.rm = FALSE)) %>%
+        dplyr::ungroup()
+
+      MCC.out <- MCC.fill %>%
+        dplyr::group_by(.data$time) %>%
+        dplyr::summarise(MCC = sum(.data$CumI, na.rm = TRUE)) %>%
+        dplyr::ungroup()
     } else {
       MCC.fill <- MCC.raw %>% tidyr::pivot_wider(names_from = "M", values_from = "CumI", names_prefix = 'M')
-      MCC <- rowSums(MCC.fill[, -1])
-      MCC.out <- data.frame(MCC) %>% dplyr::mutate(time = MCC.fill$time) %>% dplyr::select("time", "MCC")
+      MCC <- rowSums(MCC.fill[, -1], na.rm = TRUE)
+      MCC.out <- data.frame(time = MCC.fill$time, MCC = MCC)
     }
   }
 
-  MCC.out <- MCC.out %>% dplyr::mutate_at('time', as.numeric)
-  rownames(MCC.out) <- seq(nrow(MCC.out))
-
+  MCC.out <- MCC.out %>% dplyr::mutate(time = as.numeric(.data$time))
   return(MCC.out)
 }
 
@@ -128,12 +128,15 @@ scumi <- function(id, time, status, Tstart = 0) {
 #' @param status A numeric vector indicating event status (1 = event of interest, 0 = censored, 2 = competing risk).
 #' @param Tstart A numeric vector representing the age or time at study entry (left-truncation). Defaults to 0 if not provided, assuming subjects are followed from time zero.
 #' @param niter Integer specifying the number of bootstrap iterations. Default is 1000.
+#' @param seed Optional integer to set the seed for reproducible bootstrap results.
 #'
 #' @return A list containing the confidence intervals and the filled MCC matrix.
-#' @author Grace Zhou, Department of Biostatistics at St. Jude Children's Hospital \email{grace.zhou@@stjude.org}
+#' @author Grace Zhou, Department of Biostatistics at St. Jude Children's Hospital \email{grace.zhou@stjude.org}
 #' @keywords internal
 #' @noRd
-scumi_ci <- function(id, time, status, Tstart, niter) {
+scumi_ci <- function(id, time, status, Tstart, niter, seed = NULL) {
+
+  if (!is.null(seed)) set.seed(seed)
 
   MCC.out <- scumi(id, time, status, Tstart)
 
@@ -164,21 +167,24 @@ scumi_ci <- function(id, time, status, Tstart, niter) {
   }
 
   MCC.event[1, ][is.na(MCC.event[1, ])] <- 0
-  MCC.fill <- MCC.event %>% dplyr::mutate_all(zoo::na.locf)
+  MCC.fill <- MCC.event %>% dplyr::mutate(dplyr::across(dplyr::starts_with("MCC"), ~zoo::na.locf(.x, na.rm = FALSE)))
 
   quantiles <- function(x) {
-    return(stats::quantile(x, probs = c(0.025, 0.975)))
+    return(stats::quantile(x, probs = c(0.025, 0.975), na.rm = TRUE))
   }
 
-  MCC.result <- t(apply(MCC.fill[, -c(1:2)], 1, quantiles))
-  MCC.result2 <- cbind(MCC.fill[, c(1:2)], MCC.result)
+  MCC.boot_cols <- grep("^MCC[0-9]+", names(MCC.fill))
+  MCC.result <- t(apply(MCC.fill[, MCC.boot_cols], 1, quantiles))
+  colnames(MCC.result) <- c("lci", "uci")
+
+  MCC.result2 <- cbind(MCC.fill[, c("time", "MCC")], MCC.result)
 
   MCC.output <- MCC.out %>%
     dplyr::left_join(MCC.result2, by = c('time', 'MCC')) %>%
     dplyr::group_by(.data$MCC) %>%
     dplyr::reframe(time = .data$time,
-                   lci = zoo::na.locf(.data$`2.5%`),
-                   uci = zoo::na.locf(.data$`97.5%`)) %>%
+                   lci = zoo::na.locf(.data$lci, na.rm = FALSE),
+                   uci = zoo::na.locf(.data$uci, na.rm = FALSE)) %>%
     dplyr::ungroup() %>%
     dplyr::select("time", "MCC", "lci", "uci")
 
@@ -190,20 +196,27 @@ scumi_ci <- function(id, time, status, Tstart, niter) {
 #' @description
 #' Estimates the total burden of recurrent events within a population using the Mean
 #' Cumulative Count (MCC) method. Specifically designed to handle left-truncated data
-#' in the presence of competing risks by pulling accurate, time-dependent censoring
+#' in the presence of competing risks by applying time-dependent censoring
 #' and truncation weights.
 #'
 #' @param id A vector identifying individual subjects.
 #' @param time A numeric vector of event or censoring times.
 #' @param status A numeric vector indicating event status (e.g., 1 = event of interest, 0 = censored, 2 = competing risk).
 #' @param Tstart A numeric vector representing the age or time at study entry (left-truncation). Defaults to 0 if not provided, assuming subjects are followed from time zero.
-#' @param ci Logical; if \code{TRUE}, calculates 95\% bootstrap confidence intervals. Default is FALSE
+#' @param ci Logical; if \code{TRUE}, calculates 95\% bootstrap confidence intervals. Default is FALSE.
 #' @param niter Integer; the number of bootstrap iterations to run if \code{ci = TRUE}. Default is 1000.
+#' @param seed Optional integer to set the seed for reproducible bootstrap results.
 #'
 #' @return A data frame of class \code{"mcc"} containing the time points, estimated mean cumulative count, and optionally the 95\% bootstrap confidence intervals.
-#' @author Grace Zhou, Department of Biostatistics at St. Jude Children's Hospital \email{grace.zhou@@stjude.org}
-#' @importFrom dplyr %>%
+#' @author Grace Zhou, Department of Biostatistics at St. Jude Children's Hospital \email{grace.zhou@stjude.org}
+#' @importFrom dplyr %>% mutate arrange group_by ungroup filter tally pull left_join rename inner_join slice reframe select summarise across starts_with
 #' @importFrom rlang .data :=
+#' @importFrom stats quantile
+#' @importFrom zoo na.locf
+#' @importFrom tidyr pivot_wider
+#' @importFrom survival survfit Surv
+#' @importFrom mstate crprep
+#' @importFrom cmprsk cuminc timepoints
 #' @export
 #'
 #' @examples
@@ -217,22 +230,31 @@ scumi_ci <- function(id, time, status, Tstart, niter) {
 #'
 #' # Calculate the Mean Cumulative Count without bootstrap CIs
 #' result <- mcc(id = mydata$id, time = mydata$time,
-#'               status = mydata$status, Tstart = mydata$tstart)
+#'                status = mydata$status, Tstart = mydata$tstart)
 #'
 #' print(result)
-mcc <- function(id, time, status, Tstart = NULL, ci = FALSE, niter = 1000) {
+#'
+#' # Calculate the Mean Cumulative Count with bootstrap CIs
+#' result_ci <- mcc(id = mydata$id, time = mydata$time,
+#'                status = mydata$status, Tstart = mydata$tstart,
+#'                ci = TRUE, niter = 100, seed = 123)
+#'
+#' print(result_ci)
+mcc <- function(id, time, status, Tstart = NULL, ci = FALSE, niter = 1000, seed = NULL) {
 
-  # Internally handle the NULL/0 case
   if (is.null(Tstart)) Tstart <- rep(0, length(time))
 
   if (ci) {
-    res <- scumi_ci(id, time, status, Tstart, niter)[['MCC.output']]
+    res_list <- scumi_ci(id = id, time = time, status = status, Tstart = Tstart, niter = niter, seed = seed)
+    res <- res_list[['MCC.output']]
   } else {
-    res <- scumi(id, time, status, Tstart)
+    res <- scumi(id = id, time = time, status = status, Tstart = Tstart)
   }
 
-  # Assign custom class for future summary() and plot() S3 methods
-  class(res) <- c("mcc", class(res))
+  if (is.null(res)) {
+    stop("Calculation failed: Internal helper functions returned NULL.")
+  }
 
+  class(res) <- c("mcc", "data.frame")
   return(res)
 }
