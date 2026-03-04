@@ -116,7 +116,7 @@ scumi <- function(id, time, status, Tstart = 0) {
 #' @author Grace Zhou, Department of Biostatistics at St. Jude Children's Hospital \email{grace.zhou@@stjude.org}
 #' @keywords internal
 #' @noRd
-scumi_ci <- function(id, time, status, Tstart, niter = 1000) {
+scumi_ci <- function(id, time, status, Tstart, niter) {
 
   MCC.out <- scumi(id, time, status, Tstart)
 
@@ -204,7 +204,7 @@ scumi_ci <- function(id, time, status, Tstart, niter = 1000) {
 #'               ci = FALSE)
 #'
 #' print(result)
-mcc <- function(id, time, status, Tstart = NULL, ci = FALSE) {
+mcc <- function(id, time, status, Tstart = NULL, ci = FALSE, niter = 1000) {
 
   # Internally handle the NULL/0 case
   if (is.null(Tstart)) Tstart <- rep(0, length(time))
