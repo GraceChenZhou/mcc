@@ -6,7 +6,7 @@ The **mcc** R package provides a robust and efficient tool to estimate the total
 
 It is specifically designed to handle complex survival data, accurately applying time-dependent censoring and truncation weights for left-truncated data in the presence of competing risks. The methodology implements an optimized Geskus (2011) weighting approach, making it highly suitable for complex, long-term cohort studies.
 
-## Installation
+# Installation
 
 You can install the development version of the package directly from GitHub:
 
@@ -17,17 +17,18 @@ You can install the development version of the package directly from GitHub:
 devtools::install_github("GraceChenZhou/mcc")
 ```
 
-## Important Note on Dependencies
+# Important Note on Dependencies
 
 To ensure mathematical accuracy when calculating weights for left-truncated data, this package strictly requires R version 4.4.0 or higher and survival version 3.5-8 or higher. Older base R environments contain some known bugs, which causes instability in weighting logic. The installation will also automatically pull the necessary development version of the mstate package.
 
-## Basic Usage
+# Basic Usage
 
 The primary function is `mcc()`. Here is a quick, reproducible example showing how to calculate the Mean Cumulative Count for a sample cohort:
 
+```r
 library(mcc)
 
-# 1. Create a sample recurrent event dataset
+## 1. Create a sample recurrent event dataset
 mydata <- data.frame(
   id = c(1, 2, 3, 4, 4, 4, 5, 5),
   time = c(8, 1, 5, 2, 6, 7, 3, 4),
@@ -35,7 +36,7 @@ mydata <- data.frame(
   tstart = c(0, 0, 0, 0, 2, 6, 0, 3)  # left-truncation times
 )
 
-# 2. Calculate the Mean Cumulative Count 
+## 2. Calculate the Mean Cumulative Count 
 # Set ci = TRUE to calculate 95% bootstrap confidence intervals
 result <- mcc(id = mydata$id, 
               time = mydata$time, 
@@ -44,4 +45,5 @@ result <- mcc(id = mydata$id,
               ci = FALSE)
                  
 print(result)
+```
 
