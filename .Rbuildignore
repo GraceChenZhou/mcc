@@ -1,2 +1,5 @@
 ^rmcc\.Rproj$
 ^\.Rproj\.user$
+^\.github$
+^github_mcc\.Rproj$
+^code\.R$

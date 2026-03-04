@@ -4,23 +4,23 @@
 \alias{mcc}
 \title{Mean Cumulative Count for Left-Truncated Competing Risks Data}
 \usage{
-mcc(id, time, status, Tstart, ci = TRUE, niter = 1000)
+mcc(id, time, status, Tstart = NULL, ci = FALSE, niter = 1000)
 }
 \arguments{
 \item{id}{A vector identifying individual subjects.}
 
 \item{time}{A numeric vector of event or censoring times.}
 
-\item{status}{A numeric vector indicating event status (e.g., 1 = event of interest, 0 = censored/competing risk).}
+\item{status}{A numeric vector indicating event status (e.g., 1 = event of interest, 0 = censored, 2 = competing risk).}
 
-\item{Tstart}{A numeric vector indicating the time of study entry (left-truncation time).}
+\item{Tstart}{A numeric vector representing the age or time at study entry (left-truncation). Defaults to 0 if not provided, assuming subjects are followed from time zero.}
 
-\item{ci}{Logical; if \code{TRUE}, calculates 95\% bootstrap confidence intervals. Default is TRUE.}
+\item{ci}{Logical; if \code{TRUE}, calculates 95\% bootstrap confidence intervals. Default is FALSE}
 
 \item{niter}{Integer; the number of bootstrap iterations to run if \code{ci = TRUE}. Default is 1000.}
 }
 \value{
-A data frame of class \code{"mcc"} containing the time points, estimated MCC, and optionally the lower and upper 95\% confidence intervals.
+A data frame of class \code{"mcc"} containing the time points, estimated mean cumulative count, and optionally the lower and upper 95\% confidence intervals from the bootstrap method.
 }
 \description{
 Estimates the total burden of recurrent events within a population using the Mean
@@ -45,5 +45,5 @@ result <- mcc(id = mydata$id, time = mydata$time,
 print(result)
 }
 \author{
-Grace Zhou, Department of Epi and Biostatistics at St. Jude Children's Hospital \email{grace.zhou@stjude.org}
+Grace Zhou, Department of Biostatistics at St. Jude Children's Hospital \email{grace.zhou@stjude.org}
 }

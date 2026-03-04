@@ -59,6 +59,23 @@ scumi <- function(id, time, status, Tstart = 0) {
           count.data$weight.trunc <- 1
         }
 
+        # Handle NA/NaN/Inf in weights — NA weights arise when survival estimate is
+        # unavailable (e.g. time is beyond last observed event in KM estimator).
+        # Safe fallback: carry forward last known weight, then fill leading NAs with 1.
+        count.data <- count.data %>%
+          dplyr::arrange(.data$id, .data$Tstop) %>%
+          dplyr::group_by(.data$id) %>%
+          dplyr::mutate(
+            weight.cens  = ifelse(!is.finite(.data$weight.cens),  NA_real_, .data$weight.cens),
+            weight.trunc = ifelse(!is.finite(.data$weight.trunc), NA_real_, .data$weight.trunc),
+            weight.cens  = zoo::na.locf(.data$weight.cens,  na.rm = FALSE),
+            weight.trunc = zoo::na.locf(.data$weight.trunc, na.rm = FALSE),
+            # Fill any remaining leading NAs (no prior value to carry forward) with 1
+            weight.cens  = ifelse(is.na(.data$weight.cens),  1, .data$weight.cens),
+            weight.trunc = ifelse(is.na(.data$weight.trunc), 1, .data$weight.trunc)
+          ) %>%
+          dplyr::ungroup()
+
         # Calculate case weights safely inside the dataframe to avoid length mismatches
         count.data$case_weights <- count.data$weight.cens * count.data$weight.trunc
 
