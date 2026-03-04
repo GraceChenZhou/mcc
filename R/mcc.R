@@ -200,7 +200,7 @@ scumi_ci <- function(id, time, status, Tstart, niter) {
 #' @param ci Logical; if \code{TRUE}, calculates 95\% bootstrap confidence intervals. Default is FALSE
 #' @param niter Integer; the number of bootstrap iterations to run if \code{ci = TRUE}. Default is 1000.
 #'
-#' @return A data frame of class \code{"mcc"} containing the time points, estimated mean cumulative count, and optionally the lower and upper 95\% confidence intervals from the bootstrap method.
+#' @return A data frame of class \code{"mcc"} containing the time points, estimated mean cumulative count, and optionally the 95\% bootstrap confidence intervals.
 #' @author Grace Zhou, Department of Biostatistics at St. Jude Children's Hospital \email{grace.zhou@@stjude.org}
 #' @importFrom dplyr %>%
 #' @importFrom rlang .data :=
@@ -217,8 +217,7 @@ scumi_ci <- function(id, time, status, Tstart, niter) {
 #'
 #' # Calculate the Mean Cumulative Count without bootstrap CIs
 #' result <- mcc(id = mydata$id, time = mydata$time,
-#'               status = mydata$status, Tstart = mydata$tstart,
-#'               ci = FALSE)
+#'               status = mydata$status, Tstart = mydata$tstart)
 #'
 #' print(result)
 mcc <- function(id, time, status, Tstart = NULL, ci = FALSE, niter = 1000) {

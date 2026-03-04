@@ -12,6 +12,8 @@ usethis::use_build_ignore("code.R")
 
 devtools::install_github("GraceChenZhou/mcc")
 
+devtools::install_github("GraceChenZhou/mcc", force=TRUE)
+
 library(mcc)
 
 ## 1. Create a sample recurrent event dataset
@@ -35,6 +37,6 @@ result_ci <- mcc(id = mydata$id,
                  time = mydata$time,
                  status = mydata$status,
                  Tstart = mydata$tstart,
-                 ci = TRUE)
+                 ci = TRUE, niter = 500)
 
 print(result_ci)
