@@ -6,7 +6,6 @@ Authors@R: person("Grace", "Zhou",
                   email = "grace.zhou@stjude.org", 
                   role = c("aut", "cre", "cph"),
                   comment = c(ORCID = "0000-0002-4084-9100"))
-Maintainer: Grace Zhou <grace.zhou@stjude.org>
 Description: Estimates the total burden of recurrent events within a population 
     using the Mean Cumulative Count (MCC) method. Specifically designed to handle 
     left-truncated data in the presence of competing risks by applying 
@@ -26,6 +25,8 @@ Imports:
     survival (>= 3.5-8),
     tidyr,
     zoo
+Remotes: 
+    hputter/mstate
 RoxygenNote: 7.3.3
 URL: https://github.com/gracechenzhou/mcc
 BugReports: https://github.com/gracechenzhou/mcc/issues
