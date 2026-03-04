@@ -1,0 +1,31 @@
+Package: MCC
+Type: Package
+Title: Mean Cumulative Count for Left-Truncated Competing Risks Data
+Version: 0.1.0
+Authors@R: person("Grace", "Zhou", 
+                  email = "grace.zhou@stjude.org", 
+                  role = c("aut", "cre", "cph"),
+                  comment = c(ORCID = "0000-0002-4084-9100"))
+Maintainer: Grace Zhou <grace.zhou@stjude.org>
+Description: Estimates the total burden of recurrent events within a population 
+    using the Mean Cumulative Count (MCC) method. Specifically designed to handle 
+    left-truncated data in the presence of competing risks by applying 
+    time-dependent censoring and truncation weights, suitable for complex cohort 
+    studies like the Childhood Cancer Survivor Study (CCSS).
+License: GPL (>= 3)
+Encoding: UTF-8
+LazyData: true
+Depends: 
+    R (>= 4.4.0)
+Imports: 
+    cmprsk,
+    dplyr (>= 1.1.0),
+    mstate,
+    rlang,
+    stats,
+    survival (>= 3.5-8),
+    tidyr,
+    zoo
+RoxygenNote: 7.3.3
+URL: https://github.com/gracechenzhou/mcc
+BugReports: https://github.com/gracechenzhou/mcc/issues
