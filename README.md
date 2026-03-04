@@ -41,8 +41,7 @@ mydata <- data.frame(
 result <- mcc(id = mydata$id, 
               time = mydata$time, 
               status = mydata$status, 
-              Tstart = mydata$tstart, 
-              ci = FALSE)
+              Tstart = mydata$tstart)
                  
 print(result)
 ```

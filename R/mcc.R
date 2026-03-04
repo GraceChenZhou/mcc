@@ -5,11 +5,10 @@
 #'
 #' @param id A vector identifying individual subjects.
 #' @param time A numeric vector of event or censoring times.
-#' @param status A numeric vector indicating event status (1 = event of interest, 0 = censored/competing risk).
-#' @param Tstart A numeric vector indicating the time of study entry (left-truncation time). Default is 0.
-#'
-#' @return A data frame containing the time points and the estimated MCC.
-#' @author Grace Zhou, Department of Epi and Biostatistics at St. Jude Children's Hospital \email{grace.zhou@@stjude.org}
+#' @param status A numeric vector indicating event status (1 = event of interest, 0 = censored, 2 = competing risk).
+#' @param Tstart A numeric vector representing the age or time at study entry (left-truncation). Defaults to 0 if not provided, assuming subjects are followed from time zero.
+#' @return A data frame containing the time points and the estimated mean cumulative count.
+#' @author Grace Zhou, Department of Biostatistics at St. Jude Children's Hospital \email{grace.zhou@@stjude.org}
 #' @keywords internal
 #' @noRd
 scumi <- function(id, time, status, Tstart = 0) {
@@ -109,12 +108,12 @@ scumi <- function(id, time, status, Tstart = 0) {
 #'
 #' @param id A vector identifying individual subjects.
 #' @param time A numeric vector of event or censoring times.
-#' @param status A numeric vector indicating event status (1 = event of interest, 0 = censored/competing risk).
-#' @param Tstart A numeric vector indicating the time of study entry (left-truncation time).
+#' @param status A numeric vector indicating event status (1 = event of interest, 0 = censored, 2 = competing risk).
+#' @param Tstart A numeric vector representing the age or time at study entry (left-truncation). Defaults to 0 if not provided, assuming subjects are followed from time zero.
 #' @param niter Integer specifying the number of bootstrap iterations. Default is 1000.
 #'
 #' @return A list containing the confidence intervals and the filled MCC matrix.
-#' @author Grace Zhou, Department of Epi and Biostatistics at St. Jude Children's Hospital \email{grace.zhou@@stjude.org}
+#' @author Grace Zhou, Department of Biostatistics at St. Jude Children's Hospital \email{grace.zhou@@stjude.org}
 #' @keywords internal
 #' @noRd
 scumi_ci <- function(id, time, status, Tstart, niter = 1000) {
@@ -179,13 +178,13 @@ scumi_ci <- function(id, time, status, Tstart, niter = 1000) {
 #'
 #' @param id A vector identifying individual subjects.
 #' @param time A numeric vector of event or censoring times.
-#' @param status A numeric vector indicating event status (e.g., 1 = event of interest, 0 = censored/competing risk).
-#' @param Tstart A numeric vector indicating the time of study entry (left-truncation time).
-#' @param ci Logical; if \code{TRUE}, calculates 95\% bootstrap confidence intervals. Default is TRUE.
+#' @param status A numeric vector indicating event status (e.g., 1 = event of interest, 0 = censored, 2 = competing risk).
+#' @param Tstart A numeric vector representing the age or time at study entry (left-truncation). Defaults to 0 if not provided, assuming subjects are followed from time zero.
+#' @param ci Logical; if \code{TRUE}, calculates 95\% bootstrap confidence intervals. Default is FALSE
 #' @param niter Integer; the number of bootstrap iterations to run if \code{ci = TRUE}. Default is 1000.
 #'
-#' @return A data frame of class \code{"mcc"} containing the time points, estimated MCC, and optionally the lower and upper 95\% confidence intervals.
-#' @author Grace Zhou, Department of Epi and Biostatistics at St. Jude Children's Hospital \email{grace.zhou@@stjude.org}
+#' @return A data frame of class \code{"mcc"} containing the time points, estimated mean cumulative count, and optionally the lower and upper 95\% confidence intervals from the bootstrap method.
+#' @author Grace Zhou, Department of Biostatistics at St. Jude Children's Hospital \email{grace.zhou@@stjude.org}
 #' @importFrom dplyr %>%
 #' @importFrom rlang .data :=
 #' @export
@@ -205,7 +204,10 @@ scumi_ci <- function(id, time, status, Tstart, niter = 1000) {
 #'               ci = FALSE)
 #'
 #' print(result)
-mcc <- function(id, time, status, Tstart, ci = TRUE, niter = 1000) {
+mcc <- function(id, time, status, Tstart = NULL, ci = FALSE) {
+
+  # Internally handle the NULL/0 case
+  if (is.null(Tstart)) Tstart <- rep(0, length(time))
 
   if (ci) {
     res <- scumi_ci(id, time, status, Tstart, niter)[['MCC.output']]
