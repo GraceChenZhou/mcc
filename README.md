@@ -1,6 +1,6 @@
 # mcc: Mean Cumulative Count for Left-Truncated Competing Risks Data
 
-[![R-CMD-check](https://github.com/GraceChenZhou/mcc/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/GraceChenZhou/mcc/actions/workflows/R-CMD-check.yaml)
+[![R-CMD-check](https://github.com/GraceChenZhou/mcc/actions/workflows/r.yml/badge.svg)](https://github.com/GraceChenZhou/mcc/actions/workflows/r.yml)
 
 The **mcc** R package provides a robust and efficient tool to estimate the total burden of recurrent events within a population using the Mean Cumulative Count (MCC) method. 
 
