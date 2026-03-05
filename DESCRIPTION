@@ -19,7 +19,6 @@ Depends:
 Imports: 
     cmprsk,
     dplyr (>= 1.1.0),
-    mstate,
     rlang,
     stats,
     survival (>= 3.5-8),

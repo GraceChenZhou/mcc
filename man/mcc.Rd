@@ -34,19 +34,19 @@ and truncation weights.
 # Create a sample recurrent event dataset
 mydata <- data.frame(
   id = c(1, 2, 3, 4, 4, 4, 5, 5),
-  time = c(8, 1, 5, 2, 6, 7, 3, 4),
+  tstop = c(8, 1, 5, 2, 6, 7, 3, 4),
   status = c(0, 0, 2, 1, 1, 1, 1, 2),
   tstart = c(0, 0, 0, 0, 2, 6, 0, 3)
 )
 
 # Calculate the Mean Cumulative Count without bootstrap CIs
-result <- mcc(id = mydata$id, time = mydata$time,
+result <- mcc(id = mydata$id, time = mydata$tstop,
                status = mydata$status, Tstart = mydata$tstart)
 
 print(result)
 
 # Calculate the Mean Cumulative Count with bootstrap CIs
-result_ci <- mcc(id = mydata$id, time = mydata$time,
+result_ci <- mcc(id = mydata$id, time = mydata$tstop,
                status = mydata$status, Tstart = mydata$tstart,
                ci = TRUE, niter = 100, seed = 123)
 

@@ -8,7 +8,7 @@
 #' @param status A numeric vector indicating event status (1 = event of interest, 0 = censored, 2 = competing risk).
 #' @param Tstart A numeric vector representing the age or time at study entry (left-truncation). Defaults to 0 if not provided, assuming subjects are followed from time zero.
 #' @return A data frame containing the time points and the estimated mean cumulative count.
-#' @author Grace Zhou, Department of Biostatistics at St. Jude Children's Hospital \email{grace.zhou@stjude.org}
+#' @author Grace Zhou, Department of Epi and Biostatistics at St. Jude Children's Hospital \email{grace.zhou@stjude.org}
 #' @keywords internal
 #' @noRd
 scumi <- function(id, time, status, Tstart = 0) {
@@ -30,7 +30,8 @@ scumi <- function(id, time, status, Tstart = 0) {
   Event <- indata2 %>% dplyr::filter(.data$status == 1) %>% dplyr::tally()
   ftime <- sort(unique(indata2$time))
 
-  if (Event$n == 0) {
+  # Safer check for zero events
+  if (nrow(Event) == 0 || Event$n == 0) {
     MCC.out <- data.frame(time = ftime, MCC = rep(0, length(ftime)))
   } else {
     M <- indata2 %>%
@@ -40,7 +41,7 @@ scumi <- function(id, time, status, Tstart = 0) {
       dplyr::pull("n") %>%
       max()
 
-    CumI.list <- list()
+    CumI.list <- vector("list", M)
 
     for (i in 1:M) {
       in.i.th <- indata2 %>% dplyr::filter(.data$row_num == i)
@@ -51,25 +52,13 @@ scumi <- function(id, time, status, Tstart = 0) {
       out.i.th <- rbind(in.i.th, rest) %>% dplyr::select(-"row_num", -"n")
 
       if (calc.trunc) {
-        count.data <- mstate::crprep(Tstop = "time", status = "status", data = out.i.th,
-                                     trans = 1, cens = 0, Tstart = "tstart", id = "id")
+        # Note: crprep2 is my customized function (pending Author Dr. Geskus's review and approval)
+        count.data <- crprep2(Tstop = "time", status = "status", data = out.i.th,
+                              trans = 1, cens = 0, Tstart = "tstart", id = "id")
 
         if (!"weight.trunc" %in% names(count.data)) {
           count.data$weight.trunc <- 1
         }
-
-        count.data <- count.data %>%
-          dplyr::arrange(.data$id, .data$Tstop) %>%
-          dplyr::group_by(.data$id) %>%
-          dplyr::mutate(
-            weight.cens  = ifelse(!is.finite(.data$weight.cens),  NA_real_, .data$weight.cens),
-            weight.trunc = ifelse(!is.finite(.data$weight.trunc), NA_real_, .data$weight.trunc),
-            weight.cens  = zoo::na.locf(.data$weight.cens,  na.rm = FALSE),
-            weight.trunc = zoo::na.locf(.data$weight.trunc, na.rm = FALSE),
-            weight.cens  = ifelse(is.na(.data$weight.cens),  1, .data$weight.cens),
-            weight.trunc = ifelse(is.na(.data$weight.trunc), 1, .data$weight.trunc)
-          ) %>%
-          dplyr::ungroup()
 
         count.data$case_weights <- count.data$weight.cens * count.data$weight.trunc
 
@@ -109,7 +98,8 @@ scumi <- function(id, time, status, Tstart = 0) {
         dplyr::ungroup()
     } else {
       MCC.fill <- MCC.raw %>% tidyr::pivot_wider(names_from = "M", values_from = "CumI", names_prefix = 'M')
-      MCC <- rowSums(MCC.fill[, -1], na.rm = TRUE)
+      # rowSums needs to ignore the 'time' column safely
+      MCC <- rowSums(dplyr::select(MCC.fill, -time), na.rm = TRUE)
       MCC.out <- data.frame(time = MCC.fill$time, MCC = MCC)
     }
   }
@@ -131,7 +121,7 @@ scumi <- function(id, time, status, Tstart = 0) {
 #' @param seed Optional integer to set the seed for reproducible bootstrap results.
 #'
 #' @return A list containing the confidence intervals and the filled MCC matrix.
-#' @author Grace Zhou, Department of Biostatistics at St. Jude Children's Hospital \email{grace.zhou@stjude.org}
+#' @author Grace Zhou, Department of Epi and Biostatistics at St. Jude Children's Hospital \email{grace.zhou@stjude.org}
 #' @keywords internal
 #' @noRd
 scumi_ci <- function(id, time, status, Tstart, niter, seed = NULL) {
@@ -149,6 +139,9 @@ scumi_ci <- function(id, time, status, Tstart, niter, seed = NULL) {
   indata <- data.frame(id = id, time = time, status = status, tstart = Tstart)
   uid <- unique(id)
 
+  # Pre-allocate list for performance instead of joining in a loop
+  boot_list <- vector("list", niter)
+
   for (boot in 1:niter) {
     if (boot %% 100 == 0) message(sprintf("Bootstrap iteration: %d", boot))
 
@@ -160,14 +153,25 @@ scumi_ci <- function(id, time, status, Tstart, niter, seed = NULL) {
 
     boot.out <- scumi(id = bootdata$id, time = bootdata$time, status = bootdata$status, Tstart = bootdata$tstart)
 
-    rename_col <- paste0("MCC", boot)
-    boot.out2 <- boot.out %>% dplyr::rename(!!rename_col := "MCC")
-
-    MCC.event <- MCC.event %>% dplyr::left_join(boot.out2, by = "time")
+    # Store isolated results with a boot_id tag
+    boot_list[[boot]] <- boot.out %>%
+      dplyr::select("time", "MCC") %>%
+      dplyr::mutate(boot_id = paste0("MCC", boot))
   }
 
+  # Bind all iterations and pivot wider simultaneously (O(N) operation)
+  all_boots <- dplyr::bind_rows(boot_list)
+  boot_matrix <- all_boots %>%
+    tidyr::pivot_wider(names_from = "boot_id", values_from = "MCC")
+
+  # Join the consolidated matrix back to the event times
+  MCC.event <- MCC.event %>% dplyr::left_join(boot_matrix, by = "time")
+
+  # Handle baseline NAs safely
   MCC.event[1, ][is.na(MCC.event[1, ])] <- 0
-  MCC.fill <- MCC.event %>% dplyr::mutate(dplyr::across(dplyr::starts_with("MCC"), ~zoo::na.locf(.x, na.rm = FALSE)))
+
+  MCC.fill <- MCC.event %>%
+    dplyr::mutate(dplyr::across(dplyr::starts_with("MCC"), ~zoo::na.locf(.x, na.rm = FALSE)))
 
   quantiles <- function(x) {
     return(stats::quantile(x, probs = c(0.025, 0.975), na.rm = TRUE))
@@ -209,13 +213,12 @@ scumi_ci <- function(id, time, status, Tstart, niter, seed = NULL) {
 #'
 #' @return A data frame of class \code{"mcc"} containing the time points, estimated mean cumulative count, and optionally the 95\% bootstrap confidence intervals.
 #' @author Grace Zhou, Department of Biostatistics at St. Jude Children's Hospital \email{grace.zhou@stjude.org}
-#' @importFrom dplyr %>% mutate arrange group_by ungroup filter tally pull left_join rename inner_join slice reframe select summarise across starts_with
+#' @importFrom dplyr %>% mutate arrange group_by ungroup filter tally pull left_join rename inner_join slice reframe select summarise across starts_with bind_rows
 #' @importFrom rlang .data :=
 #' @importFrom stats quantile
 #' @importFrom zoo na.locf
 #' @importFrom tidyr pivot_wider
 #' @importFrom survival survfit Surv
-#' @importFrom mstate crprep
 #' @importFrom cmprsk cuminc timepoints
 #' @export
 #'
@@ -223,19 +226,19 @@ scumi_ci <- function(id, time, status, Tstart, niter, seed = NULL) {
 #' # Create a sample recurrent event dataset
 #' mydata <- data.frame(
 #'   id = c(1, 2, 3, 4, 4, 4, 5, 5),
-#'   time = c(8, 1, 5, 2, 6, 7, 3, 4),
+#'   tstop = c(8, 1, 5, 2, 6, 7, 3, 4),
 #'   status = c(0, 0, 2, 1, 1, 1, 1, 2),
 #'   tstart = c(0, 0, 0, 0, 2, 6, 0, 3)
 #' )
 #'
 #' # Calculate the Mean Cumulative Count without bootstrap CIs
-#' result <- mcc(id = mydata$id, time = mydata$time,
+#' result <- mcc(id = mydata$id, time = mydata$tstop,
 #'                status = mydata$status, Tstart = mydata$tstart)
 #'
 #' print(result)
 #'
 #' # Calculate the Mean Cumulative Count with bootstrap CIs
-#' result_ci <- mcc(id = mydata$id, time = mydata$time,
+#' result_ci <- mcc(id = mydata$id, time = mydata$tstop,
 #'                status = mydata$status, Tstart = mydata$tstart,
 #'                ci = TRUE, niter = 100, seed = 123)
 #'
