@@ -9,7 +9,7 @@ jobs:
       fail-fast: false  # This allows us to see the results for all versions
       matrix:
         r-version: [
-          '4.4.0', '4.4.1', '4.4.2', '4.4.3', 
+          '4.4.0', '4.4.1', '4.4.2', '4.4.3',
           '4.5.0', '4.5.1', '4.5.2', 'release'
         ]
     steps:
@@ -22,7 +22,7 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck, any::remotes, hputter/mstate
+          extra-packages: any::rcmdcheck, any::remotes
           needs: check
 
       - name: Check
