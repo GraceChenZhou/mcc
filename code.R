@@ -132,3 +132,39 @@ usethis::use_testthat()
 
 ## Create a Test File for MCC
 usethis::use_test("mcc")
+
+# Test 5: Survival package ====
+
+# Define the historical versions to check
+versions_to_test <- c("3.5-8", "3.7-0")
+
+  # 1. Create a temporary folder to act as a sandbox library
+  my_temp_lib <- file.path(tempdir(), "old_survival")
+  dir.create(my_temp_lib, showWarnings = FALSE)
+
+  # 2. Tell remotes to install the old version ONLY into this new folder
+  # (I turned quiet = FALSE so you can see if it throws any C++ compilation errors)
+  remotes::install_version("survival", version = "3.7-0", lib = my_temp_lib, quiet = FALSE)
+
+  # 3. Unload your current modern survival package
+  if ("package:survival" %in% search()) detach("package:survival", unload=TRUE)
+
+  try(unloadNamespace("mstate"), silent = TRUE)
+  try(unloadNamespace("survival"), silent = TRUE)
+  .libPaths(c(my_temp_lib, .libPaths()))
+  # 4. Load the historical version explicitly from your sandbox
+  library(survival, lib.loc = my_temp_lib)
+
+  # 5. Verify it worked
+  packageVersion("survival")
+
+  # Run your exact test
+  tmp <- as.data.frame(matrix(c(1,2,6,1,3,1,3,2,4,4,6,1,5,5,7,1),byrow=TRUE,nrow=4))
+  names(tmp) <- c("id","tstart","tstop","status")
+  fit <- survfit(Surv(-tmp$tstop, -tmp$tstart, c(1,1,1,1)) ~ 1)
+  res <- summary(fit, times = c(-5, -6, -3, -6, -7, -6, -7))
+
+  print(res)
+
+# Remember to reinstall the latest version when you are done!
+# install.packages("survival")
