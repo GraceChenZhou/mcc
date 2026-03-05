@@ -52,7 +52,6 @@ scumi <- function(id, time, status, Tstart = 0) {
       out.i.th <- rbind(in.i.th, rest) %>% dplyr::select(-"row_num", -"n")
 
       if (calc.trunc) {
-        # Note: crprep2 is my customized function (pending Author Dr. Geskus's review and approval)
         count.data <- crprep2(Tstop = "time", status = "status", data = out.i.th,
                               trans = 1, cens = 0, Tstart = "tstart", id = "id")
 
@@ -126,8 +125,6 @@ scumi <- function(id, time, status, Tstart = 0) {
 #' @noRd
 scumi_ci <- function(id, time, status, Tstart, niter, seed = NULL) {
 
-  if (!is.null(seed)) set.seed(seed)
-
   MCC.out <- scumi(id, time, status, Tstart)
 
   MCC.event <- MCC.out %>%
@@ -144,6 +141,8 @@ scumi_ci <- function(id, time, status, Tstart, niter, seed = NULL) {
 
   for (boot in 1:niter) {
     if (boot %% 100 == 0) message(sprintf("Bootstrap iteration: %d", boot))
+
+    if (!is.null(seed)) set.seed(boot + seed)
 
     sid <- sample(uid, replace = TRUE)
     sid2 <- data.frame(new.id = seq_along(sid), id = sid)
@@ -220,6 +219,7 @@ scumi_ci <- function(id, time, status, Tstart, niter, seed = NULL) {
 #' @importFrom tidyr pivot_wider
 #' @importFrom survival survfit Surv
 #' @importFrom cmprsk cuminc timepoints
+#' @note Requires \code{crprep2}, a customized version of development \code{mstate::crprep} (pending Author Dr. Geskus's review and approval).
 #' @export
 #'
 #' @examples

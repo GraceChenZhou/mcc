@@ -30,6 +30,9 @@ Cumulative Count (MCC) method. Specifically designed to handle left-truncated da
 in the presence of competing risks by applying time-dependent censoring
 and truncation weights.
 }
+\note{
+Requires \code{crprep2}, a customized version of development \code{mstate::crprep} (pending Author Dr. Geskus's review and approval).
+}
 \examples{
 # Create a sample recurrent event dataset
 mydata <- data.frame(

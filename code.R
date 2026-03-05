@@ -1,5 +1,6 @@
 devtools::document()
 devtools::check()
+
 # 1. Ignore the .github folder (used for your R 4.4.x-4.5.2 testing matrix)
 usethis::use_build_ignore(".github")
 
@@ -18,41 +19,41 @@ library(mcc)
 ## 1. Create a sample recurrent event dataset
 mydata <- data.frame(
   id = c(1, 2, 3, 4, 4, 4, 5, 5),
-  time = c(8, 1, 5, 2, 6, 7, 3, 4),
+  tstop = c(8, 1, 5, 2, 6, 7, 3, 4),
   status = c(0, 0, 2, 1, 1, 1, 1, 2), # 1 = event, 0 = censored, 2 = competing risk
   tstart = c(0, 0, 0, 0, 2, 6, 0, 3)  # left-truncation times
 )
 
 ## 2. Calculate the Mean Cumulative Count
 # Set ci = TRUE to calculate 95% bootstrap confidence intervals
-result <- mcc(id = mydata$id,
-              time = mydata$time,
-              status = mydata$status,
-              Tstart = mydata$tstart)
+mcc(id = mydata$id,
+    time = mydata$tstop,
+    status = mydata$status,
+    Tstart = mydata$tstart)
 
-print(result)
+
 
 result_ci <- mcc(id = mydata$id,
-                 time = mydata$time,
+                 time = mydata$tstop,
                  status = mydata$status,
                  Tstart = mydata$tstart,
-                 ci = TRUE, niter = 500)
+                 ci = TRUE, niter = 100, seed = 123)
 
 print(result_ci)
 
 source("C:/Users/gzhou/OneDrive - St. Jude Children's Research Hospital/4GRACE/MCC/MCC R PACKAGE/MY_MCC_R.R")
 library(dplyr)
 MY.MCC(id = mydata$id,
-       time = mydata$time,
+       time = mydata$tstop,
        status = mydata$status,
        Tstart = mydata$tstart,
        ci=FALSE)
 
 MY.MCC(id = mydata$id,
-       time = mydata$time,
+       time = mydata$tstop,
        status = mydata$status,
        Tstart = mydata$tstart,
-       ci=TRUE, niter = 500)
+       ci=TRUE, niter = 100)
 
 #Test 2: Correct result? ====
 
@@ -246,3 +247,5 @@ result <- mcc(id = data$id,
               Tstart = data$tstart)
 
 # Test 3: Real data analysis ====
+
+# Test 4: Consistency across Version 4.4.0 - 4.5.2 ====
