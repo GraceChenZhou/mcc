@@ -21,11 +21,9 @@ Imports:
     dplyr (>= 1.1.0),
     rlang,
     stats,
-    survival (>= 3.5-8),
+    survival (>= 3.7-0),
     tidyr,
     zoo
-Remotes: 
-    hputter/mstate
 RoxygenNote: 7.3.3
 URL: https://github.com/gracechenzhou/mcc
 BugReports: https://github.com/gracechenzhou/mcc/issues
