@@ -19,7 +19,7 @@ devtools::install_github("GraceChenZhou/mcc")
 
 # Important Note on Dependencies
 
-To ensure mathematical accuracy when calculating weights for left-truncated data, this package strictly requires R version 4.4.0 or higher and survival version 3.5-8 or higher. Older base R environments contain some known bugs, which causes instability in weighting logic. The installation will also automatically pull the necessary development version of the mstate package.
+To ensure mathematical accuracy when calculating weights for left-truncated data, this package strictly requires R version 4.4.0 or higher and survival version 3.5-8 or higher. Older base R environments (along with older survival version) contain some known bugs, which causes instability in weighting logic. 
 
 # Basic Usage
 
