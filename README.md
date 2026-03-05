@@ -17,9 +17,9 @@ You can install the development version of the package directly from GitHub:
 devtools::install_github("GraceChenZhou/mcc")
 ```
 
-# Important Note on Dependencies
+# Dependencies
 
-To ensure mathematical accuracy when calculating weights for left-truncated data, this package strictly requires R version 4.4.0 or higher and survival version 3.5-8 or higher. Older base R environments (along with older survival version) contain some known bugs, which causes instability in weighting logic. 
+To maintain mathematical accuracy when computing weights for left‑truncated data, this package requires R version 4.4.0 or later and survival version 3.7-0 or later. 
 
 # Basic Usage
 
