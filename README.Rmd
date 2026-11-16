@@ -28,6 +28,7 @@ It is specifically designed to handle complex longitudinal survival data, accura
 # Installation
 
 ### From GitHub
+
 You can install the development version of the package directly from GitHub:
 
 ```r
@@ -38,6 +39,7 @@ devtools::install_github("GraceChenZhou/mcc")
 ```
 
 ### From Local Source Tarball
+
 If you received the compiled source package (`.tar.gz`), install it locally using:
 
 ```r
@@ -171,6 +173,7 @@ fit_delayed <- mcc(
 )
 plot(fit_delayed, conf_int = FALSE, xlab = "Follow-up time")
 ```
+
 ## 5. Customize themes, labels, and layout
 
 ```{r custom-layout, fig.width=9, fig.height=6}
