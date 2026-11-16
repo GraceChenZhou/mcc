@@ -10,8 +10,10 @@ Cumulative Count (MCC) method.
 It is specifically designed to handle complex longitudinal survival
 data, accurately applying time-dependent censoring and truncation
 weights for left-truncated data in the presence of competing risks. The
-methodology implements an optimized Geskus (2011) weighting approach,
-making it highly suitable for complex, long-term cohort studies.
+methodology implements an optimized [Geskus
+(2011)](https://onlinelibrary.wiley.com/doi/full/10.1111/j.1541-0420.2010.01420.x)
+weighting approach, making it highly suitable for complex, long-term
+cohort studies.
 
 # Installation
 
@@ -87,6 +89,8 @@ head(mydata)
 
 ## 2. Run Stratified MCC with Bootstrap Confidence Intervals
 # Set ci = TRUE to compute bootstrap intervals
+# For demonstration purposes, only 100 bootstrap iterations (niter = 100) are used to reduce computation time. For actual statistical analyses, a larger number of bootstrap iterations (e.g., niter = 1000 or more) is recommended to obtain more stable confidence interval estimates.
+
 result <- mcc(id = mydata$id, 
               time = mydata$time, 
               status = mydata$status, 
@@ -98,6 +102,16 @@ result <- mcc(id = mydata$id,
                  
 ## 3. Extract numeric estimates
 estimates_df <- as.data.frame(result)
+head(estimates_df)
+#> # A tibble: 6 × 5
+#>   group  time     MCC     lci    uci
+#>   <chr> <dbl>   <dbl>   <dbl>  <dbl>
+#> 1 A     0.178 0.00667 0       0.0233
+#> 2 A     0.193 0.0133  0       0.0333
+#> 3 A     0.422 0.02    0       0.0433
+#> 4 A     0.480 0.02    0       0.0433
+#> 5 A     0.497 0.0267  0.00667 0.0501
+#> 6 A     0.632 0.0334  0.00667 0.0601
 ```
 
 To display a concise numerical summary at selected time points:
@@ -143,8 +157,7 @@ plot(result, risk_times = c(2, 4, 6, 8, 10))
 Confidence ribbons require confidence limits from an `mcc()` fit with
 `ci = TRUE`. For a fit with `ci = FALSE`, the function can still display
 MCC curves and a risk table without ribbons. The example above uses
-`niter = 100` for illustration; larger bootstrap runs may be appropriate
-for substantive analyses.
+`niter = 100` for illustration.
 
 ## 2. Highlight a control group and customize colors
 
@@ -164,34 +177,23 @@ plot(
 ![](man/figures/README-control-colors-1.png)<!-- -->
 
 `color_values` and `line_values` are **named vectors indexed by the
-original group names**, not by the displayed legend labels. A
-user-specified line type overrides the default dashed control line:
+original group names**, not by the displayed legend labels. By default,
+the control group is represented by a dashed line, but this can be
+overridden by specifying a custom line type through line_values.
+Additionally, users can customize the risk-table time points using the
+risk_times argument.
 
 ``` r
 plot(
   result,
   control_group = "A",
   line_values = c(A = "dotdash", B = "solid"),
-  palette = "Dark2"
+  palette = "Dark2",
+  risk_times = c(2, 6, 10)
 )
 ```
 
 ![](man/figures/README-control-line-types-1.png)<!-- -->
-
-## 3. Select groups and control risk-table time points
-
-``` r
-# Display only group B
-# Display group B and automatically include the specified control group A
-plot(
-  result,
-  group_value = "B",
-  control_group = "A",
-  risk_times = c(2, 4, 6, 8, 10)
-)
-```
-
-![](man/figures/README-selected-groups-1.png)<!-- -->
 
 The risk table counts **distinct subjects**, not recurrent-event
 records. For left-truncated analyses, a subject is counted at time `t`
@@ -199,20 +201,19 @@ when their entry time is strictly before `t` and their observed exit
 time is at or after `t` (`Tstart < t <= time`). Without left truncation,
 the criterion is `time >= t`. These counts describe the observed risk
 sets, not inverse-probability-weighted effective sample sizes.
-
 `risk_times` sets the displayed risk-table time points and the
 corresponding x-axis ticks. When omitted, the function chooses default
 time points based on the observed MCC time range.
 
-## 4. Choose the analysis time scale
+## 3. Choose the analysis time scale
 
 The `time` and `Tstart` inputs must use the **same time scale**. For an
-age-scale analysis, `time` is age at each event or censoring and
-`Tstart` is age at study entry. The delayed-entry example below uses the
-simulated dataset on its generic follow-up time scale.
+age-scale analysis, `time` is age at each event or competing risk or
+censoring and `Tstart` is age at study entry. The delayed-entry example
+below uses the simulated dataset on its generic follow-up time scale.
 
 ``` r
-# Follow-up-time analysis with delayed entry
+
 fit_delayed <- mcc(
   id = mydata$id, time = mydata$time, status = mydata$status,
   Tstart = mydata$tstart, group = mydata$group
@@ -220,8 +221,9 @@ fit_delayed <- mcc(
 plot(fit_delayed, conf_int = FALSE, xlab = "Follow-up time")
 ```
 
-![](man/figures/README-delayed-entry-1.png)<!-- --> \## 5. Customize
-themes, labels, and layout
+![](man/figures/README-delayed-entry-1.png)<!-- -->
+
+## 4. Customize themes, labels, and layout
 
 ``` r
 plot(
@@ -244,10 +246,10 @@ plot(
 
 ![](man/figures/README-custom-layout-1.png)<!-- -->
 
-## 6. Retrieve and reuse the plot components
+## 5. Retrieve and reuse the plot components
 
-Unlike `plot(result)`, the standalone function returns a list of plot
-objects and data:
+Unlike `plot(result)`, the standalone function
+`plot_mcc_with_risk_table` returns a list of plot objects and data:
 
 ``` r
 p <- plot_mcc_with_risk_table(
@@ -280,7 +282,7 @@ p$plot
 # ggplot2::ggsave("mcc_plot.png", plot = p$plot, width = 8, height = 6, dpi = 300)
 ```
 
-## 7. Plot an unstratified analysis
+## 6. Plot an unstratified analysis
 
 ``` r
 result_overall <- mcc(
@@ -291,7 +293,7 @@ result_overall <- mcc(
   ci = FALSE
 )
 
-plot(result_overall, conf_int = FALSE, title = "Overall MCC")
+plot(result_overall, title = "Overall MCC")
 ```
 
 ![](man/figures/README-unstratified-plot-1.png)<!-- -->
@@ -330,17 +332,62 @@ caller’s random-number-generator state.
 ``` r
 # Simulate one individual directly
 set.seed(2026)
+
 one_subject <- simulate_subject(
-  id = 1, group = "A", entry_time = 0.5,
-  event_rate = 0.22, death_rate = 0.03, censor_rate = 0.05
+  id = 1,
+  group = "A",
+  entry_time = 0.5,
+  max_followup = 10,
+  event_rate = 0.22,
+  death_rate = 0.03,
+  censor_rate = 0.05
 )
 
-# Simulate an unstratified example by omitting group from mcc()
-overall_fit <- mcc(
-  id = mydata$id, time = mydata$time, status = mydata$status,
-  Tstart = mydata$Tstart
+one_subject
+#>   id    time status Tstart group
+#> 1  1 2.76122      0    0.5     A
+```
+
+``` r
+# Simulate two groups with different recurrent-event rates
+mydata <- simulate_mcc_data(
+  n_per_group = 100,
+  event_rates = c(A = 0.22, B = 0.38),
+  max_followup = 10,
+  entry_range = c(0, 2),
+  seed = 2026
 )
-invisible(overall_fit)
+
+# Preview the first five subject
+first_5_ids <- unique(mydata$id)[1:5]
+mydata_5 <- mydata[mydata$id %in% first_5_ids, ]
+print(mydata_5)
+#>   id      time status    Tstart group
+#> 1  1  7.079862      0 1.3973469     A
+#> 2  2 10.000000      0 1.1130610     A
+#> 3  3  1.959921      0 0.2802799     A
+#> 4  4 10.000000      0 0.5714466     A
+#> 5  5  2.239416      1 1.1107380     A
+#> 6  5  3.159859      1 1.1107380     A
+#> 7  5  7.148878      1 1.1107380     A
+#> 8  5  9.700798      2 1.1107380     A
+
+# Number of unique subjects in each group
+table(
+  mydata$group[
+    !duplicated(mydata$id)
+  ]
+)
+#> 
+#>   A   B 
+#> 100 100
+
+# Distribution of recurrent events, censoring, and competing risks
+table(mydata$group, mydata$status)
+#>    
+#>       0   1   2
+#>   A  77 143  23
+#>   B  84 266  16
 ```
 
 For function arguments and return values, see `?simulate_subject` and
