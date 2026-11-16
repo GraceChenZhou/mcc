@@ -50,7 +50,11 @@ The primary function is `mcc()`. It evaluates unstratified cohorts or
 handles group stratification natively while providing convenient S3
 methods for reporting and extracting your data. The package also exports
 `simulate_subject()` for generating one synthetic subject and
-`simulate_mcc_data()` for reproducible multi-group examples.
+`simulate_mcc_data()` for reproducible multi-group examples. For
+demonstration purposes, only 100 bootstrap iterations (niter = 100) are
+used to reduce computation time. For actual statistical analyses, a
+larger number of bootstrap iterations (e.g., niter = 1000 or more) is
+recommended to obtain more stable confidence interval estimates.
 
 ``` r
 library(mcc)
@@ -89,7 +93,6 @@ head(mydata)
 
 ## 2. Run Stratified MCC with Bootstrap Confidence Intervals
 # Set ci = TRUE to compute bootstrap intervals
-# For demonstration purposes, only 100 bootstrap iterations (niter = 100) are used to reduce computation time. For actual statistical analyses, a larger number of bootstrap iterations (e.g., niter = 1000 or more) is recommended to obtain more stable confidence interval estimates.
 
 result <- mcc(id = mydata$id, 
               time = mydata$time, 
