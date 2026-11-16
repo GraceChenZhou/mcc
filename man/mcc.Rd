@@ -2,59 +2,97 @@
 % Please edit documentation in R/mcc.R
 \name{mcc}
 \alias{mcc}
-\title{Mean Cumulative Count for Left-Truncated Competing Risks Data}
+\title{Estimate Mean Cumulative Count for Left-Truncated Competing Risks Data}
 \usage{
-mcc(id, time, status, Tstart = NULL, ci = FALSE, niter = 1000, seed = NULL)
+mcc(
+  id,
+  time,
+  status,
+  Tstart = NULL,
+  group = NULL,
+  ci = FALSE,
+  conf.level = 0.95,
+  niter = 1000,
+  seed = NULL
+)
 }
 \arguments{
-\item{id}{A vector identifying individual subjects.}
+\item{id}{A vector uniquely identifying individual subjects.}
 
 \item{time}{A numeric vector of event or censoring times.}
 
-\item{status}{A numeric vector indicating event status (e.g., 1 = event of interest, 0 = censored, 2 = competing risk).}
+\item{status}{A numeric vector indicating event status (0 = censored, 1 = event of interest, 2 = competing risk).}
 
-\item{Tstart}{A numeric vector representing the age or time at study entry (left-truncation). Defaults to 0 if not provided, assuming subjects are followed from time zero.}
+\item{Tstart}{A numeric vector representing the age or time at study entry (left-truncation).
+Defaults to 0 if not provided, assuming subjects are followed from time zero.}
 
-\item{ci}{Logical; if \code{TRUE}, calculates 95\% bootstrap confidence intervals. Default is FALSE.}
+\item{group}{An optional vector of group labels (e.g., treatment arm, sex) with the same length as \code{id}.
+MCC is estimated separately within each group. If \code{NULL} (default), MCC is estimated
+for the full dataset.}
+
+\item{ci}{Logical; if \code{TRUE}, calculates bootstrap confidence intervals. Default is \code{FALSE}.}
+
+\item{conf.level}{A numeric value between 0 and 1 specifying the confidence level for the
+bootstrap intervals. Default is 0.95 (95\% CI).}
 
 \item{niter}{Integer; the number of bootstrap iterations to run if \code{ci = TRUE}. Default is 1000.}
 
 \item{seed}{Optional integer to set the seed for reproducible bootstrap results.}
 }
 \value{
-A data frame of class \code{"mcc"} containing the time points, estimated mean cumulative count, and optionally the 95\% bootstrap confidence intervals.
+An object of class \code{"mcc"}. This object is a named list containing:
+  \item{estimates}{A data frame of evaluated evaluation time points, estimated MCC, and bootstrap confidence intervals if \code{ci = TRUE}.}
+  \item{data}{A data frame containing the original sanitized input data vectors used for summary and risk statistics.}
+  \item{ci}{The logical value indicating whether confidence intervals were calculated.}
+  \item{conf.level}{The numerical confidence level utilized for interval calculation bounds.}
 }
 \description{
 Estimates the total burden of recurrent events within a population using the Mean
 Cumulative Count (MCC) method. Specifically designed to handle left-truncated data
 in the presence of competing risks by applying time-dependent censoring
-and truncation weights.
+and truncation weights. Optionally stratifies results by a grouping variable.
 }
 \note{
-Requires \code{crprep2}, a customized version of development \code{mstate::crprep} (pending Author Dr. Geskus's review and approval).
+Requires \code{crprep2}, a customized internal version of development \code{mstate::crprep}.
 }
 \examples{
 # Create a sample recurrent event dataset
 mydata <- data.frame(
-  id = c(1, 2, 3, 4, 4, 4, 5, 5),
-  tstop = c(8, 1, 5, 2, 6, 7, 3, 4),
-  status = c(0, 0, 2, 1, 1, 1, 1, 2),
-  tstart = c(0, 0, 0, 0, 2, 6, 0, 3)
+  id     = c(1, 2, 3, 4, 4, 4, 5, 5),
+  tstop  = c(8, 1, 5, 2, 6, 7, 3, 4),
+  status = c(0, 0, 2, 1, 1, 1, 1, 2), # 0=censored, 1=event, 2=competing risk
+  tstart = c(0, 0, 0, 0, 2, 6, 0, 3),
+  group  = c("A", "A", "B", "B", "B", "B", "A", "A")
 )
 
-# Calculate the Mean Cumulative Count without bootstrap CIs
+# 1. Calculate unstratified MCC
 result <- mcc(id = mydata$id, time = mydata$tstop,
-               status = mydata$status, Tstart = mydata$tstart)
-
+              status = mydata$status, Tstart = mydata$tstart)
 print(result)
 
-# Calculate the Mean Cumulative Count with bootstrap CIs
-result_ci <- mcc(id = mydata$id, time = mydata$tstop,
-               status = mydata$status, Tstart = mydata$tstart,
-               ci = TRUE, niter = 100, seed = 123)
+# 2. Extract full estimates cleanly as a standard data frame
+result_df <- as.data.frame(result)
 
-print(result_ci)
+# 3. Generate a milestone summary table at specific time points
+summary(result, times = c(2, 5, 7))
+
+# 4. Calculate MCC stratified by treatment group
+result_grp <- mcc(id = mydata$id, time = mydata$tstop,
+                  status = mydata$status, Tstart = mydata$tstart,
+                  group = mydata$group)
+print(result_grp)
+summary(result_grp)
+summary(result_grp, times = c(2, 5, 7))
+\donttest{
+# 5. Calculate MCC with bootstrap confidence intervals (run locally)
+# Note: We wrap this in \donttest to ensure fast package compilation times.
+result_grp_ci <- mcc(id = mydata$id, time = mydata$tstop,
+                     status = mydata$status, Tstart = mydata$tstart,
+                     group = mydata$group, ci = TRUE, niter = 100, seed = 123)
+print(result_grp_ci)
+summary(result_grp_ci)
+}
 }
 \author{
-Grace Zhou, Department of Biostatistics at St. Jude Children's Hospital \email{grace.zhou@stjude.org}
+Grace Zhou, Department of Biostatistics at St. Jude Children's Research Hospital \email{grace.zhou@stjude.org}
 }

@@ -1,5 +1,32 @@
-#' Internal helper to create framework for dataset
+#' Expand Competing Risks Tracking Frames for Time-Dependent Weighting (Internal)
+#'
+#' @description
+#' An internal structural helper that expands long-format survival data frames.
+#' For individuals experiencing a competing risk, it replicates data rows across
+#' subsequent event times of interest to allow time-dependent weights to vary.
+#'
+#' @details
+#' This function calculates the number of event times remaining after an individual
+#' experiences a competing risk event (\code{status == cens}). It replicates that
+#' subject's tracking rows accordingly and dynamically computes staggered pseudo-intervals
+#' (\code{Tstart}, \code{Tstop}) for the expanded data grid. This grid forms the foundational
+#' framework used by \code{crprep2} to append time-dependent inverse probability weights.
+#'
+#' @param Tstart A numeric vector representing entry times (left-truncation bounds).
+#' @param Tstop A numeric vector representing exit times (event or censoring bounds).
+#' @param status A numeric or factor vector denoting event status.
+#' @param id A vector uniquely identifying individual subjects.
+#' @param stratum A vector indicating stratification factors (or a vector of 1s if unstratified).
+#' @param failcode The specific status value code designating the event of interest.
+#' @param cens The status value code designating right-censoring.
+#'
+#' @return A data frame with expanded rows containing columns: \code{id}, \code{Tstart},
+#' \code{Tstop}, \code{status}, and \code{strata}, optimized for time-dependent weight application.
+#'
+#' @author Ronald Geskus
+#'
 #' @importFrom utils tail
+#' @keywords internal
 #' @noRd
 create.wData.omega <- function(Tstart, Tstop, status, id, stratum, failcode, cens){
   event.times <- sort(unique(Tstop[status==failcode]))
@@ -33,12 +60,71 @@ create.wData.omega <- function(Tstart, Tstop, status, id, stratum, failcode, cen
   return(data.weight)
 }
 
-
-#' Internal Function to create weighted data set for competing risks analyses
+#' Create a Weighted Dataset for Competing Risks Analyses (Internal)
 #'
-#' This is a customized, internal version of crprep provided by Dr. Geskus on May 8, 2025
+#' @description
+#' This is a customized, internal version of the \code{crprep} function originally
+#' authored by Dr. Ronald Geskus for the \code{mstate} package. It has been
+#' modified to support correct left-truncation weighting and to introduce robust
+#' safeguards that prevent the function from crashing when encountering expected
+#' \code{NA} or \code{NaN} weights in extreme single-individual risk sets.
 #'
-#' @importFrom survival survfit Surv
+#' @details
+#' The development history and modifications of this derived work are documented below:
+#' \itemize{
+#'   \item \strong{May 8, 2025 (Left-Truncation Weight Fix):} Collaborative alignment
+#'   on left-truncation weights led Dr. Geskus to provide a customized version of
+#'   \code{crprep} fixing these calculations (pending official \code{mstate} package release).
+#'   \item \strong{June 12, 2026 (Censoring-Induced Survival Drop Resolution):} Extensive pipeline
+#'   testing revealed a function crash when \code{shorten = TRUE}. Formal communication with
+#'   Dr. Geskus on March 6, 2026, followed by his resolution on June 12, 2026, isolated the mechanism:
+#'   when a censoring event occurs when only a single individual is at risk, the conditional
+#'   censoring survival distribution drops sharply to zero. In \code{crprep}, this causes the
+#'   \code{tapply} omega weight step to attempt a division-by-zero (\code{x / x[1]} where \code{x[1] == 0}),
+#'   generating \code{NaN} values inside \code{weight.cens}.
+#'   \item \strong{Grace Zhou's Stability Modifications:} While \code{NaN} or \code{NA} weights are
+#'   mathematically expected under extreme single-individual risk sets, the downstream logic in
+#'   \code{mstate::crprep} crashes when collapsing rows via \code{diff()} because \code{NA} breaks
+#'   the logical subsetting vector \code{keep.rows}. To allow execution to proceed on data
+#'   where this edge-case appears, this internal implementation incorporates two safeguards:
+#'   \enumerate{
+#'     \item Modifies the underlying \code{tapply} call to return \code{NA} cleanly when \code{x[1] == 0}.
+#'     \item Patches row selection via \code{keep.rows[which(is.na(keep.rows))] <- TRUE}, ensuring the
+#'     row-collapsing step does not break.
+#'   }
+#'   \item \strong{Survival Package Version Discrepancy Note:} Calculation
+#'   discrepancies across different R environments were successfully traced to the
+#'   underlying \code{survival} package (a core package distributed with R). Legacy
+#'   versions (including v3.3-1 and v3.5-8 under R 4.4.0) contained a bug where
+#'   step functions incorrectly handled the reversed (negative) survival times used
+#'   to calculate left-truncation conditional weights. This bug was resolved in
+#'   \code{survival} version 3.7-0 and newer. Running the pipeline with \code{survival}
+#'   v3.7-0 or newer generates correct, stable, and reproducible weight estimates.
+#'}
+#'
+#' @param Tstop A numeric vector or character string specifying event/censoring times.
+#' @param status A numeric, factor, or character vector specifying event statuses.
+#' @param data An optional data frame containing input variables.
+#' @param trans A vector of event codes for which tracking layers are built.
+#' @param cens Code indicating right-censoring values.
+#' @param Tstart Entry times for left-truncated datasets.
+#' @param id Variable indicating unique participant labels.
+#' @param strata Variable name handling sample stratification layer bounds.
+#' @param keep Covariates retained through dataframe replication loops.
+#' @param shorten Logical; collapses identical sequential weight rows if TRUE.
+#' @param rm.na Logical; strips rows containing missing values.
+#' @param origin Numeric shifting baseline times.
+#' @param prec.factor Floating precision factor applied to tied time handling.
+#' @param ... Additional options passed down to internal methods.
+#'
+#' @author Ronald Geskus (Original code); Grace Zhou (Modifications and integration)
+#'
+#' @note
+#' The original \code{crprep} function is part of the \code{mstate} package.
+#' Proper attribution to the original author is maintained here to comply with CRAN
+#' policies regarding derived work.
+#'
+#' @keywords internal
 #' @noRd
 crprep2 <- function(Tstop, status, data, trans=1, cens=0, Tstart=0, id, strata,
                     keep, shorten=TRUE, rm.na=TRUE, origin=0,

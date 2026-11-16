@@ -23,7 +23,10 @@ Imports:
     stats,
     survival (>= 3.7-0),
     tidyr,
-    zoo
+    zoo,
+    future.apply (>= 1.8.1),
+    ggplot2,
+    patchwork
 RoxygenNote: 7.3.3
 URL: https://github.com/gracechenzhou/mcc
 BugReports: https://github.com/gracechenzhou/mcc/issues
